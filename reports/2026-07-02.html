@@ -76,6 +76,7 @@
     body {
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
+      overflow-x: hidden;
     }
 
     img,
@@ -139,13 +140,15 @@
       }
 
       .map-stage {
+        width: 100%;
+        max-width: 100%;
         min-height: 390px;
         aspect-ratio: auto;
       }
 
       .world-map {
-        inset: 64px 0 auto;
-        height: 260px;
+        inset: 0;
+        height: 100%;
       }
 
       .leader,
@@ -160,13 +163,14 @@
         font-size: 11px;
         line-height: 1.32;
         background: rgba(255, 255, 255, 0.96);
+        overflow: visible;
       }
 
-      .map-float-1 { left: 4%; top: 2.5%; width: 45%; }
-      .map-float-2 { left: 51%; top: 2.5%; width: 45%; }
-      .map-float-3 { left: 56%; top: 69%; width: 40%; }
-      .map-float-4 { left: 4%; top: 69%; width: 48%; }
-      .map-float-5 { left: 27%; top: 83.5%; width: 48%; }
+      .map-float-1 { left: 3%; top: 2.5%; width: 44%; }
+      .map-float-2 { left: 49%; top: 2.5%; width: 44%; }
+      .map-float-3 { left: 52%; top: 68%; width: 43%; }
+      .map-float-4 { left: 3%; top: 68%; width: 47%; }
+      .map-float-5 { left: 22%; top: 83%; width: 54%; }
 
       .content {
         gap: 22px;
@@ -186,8 +190,8 @@
       }
 
       .world-map {
-        inset: 86px 0 auto;
-        height: 250px;
+        inset: 0;
+        height: 100%;
       }
 
       .map-float {
@@ -400,5 +404,59 @@
       </section>
     </main>
   </div>
+
+  <!-- focus-map-leader-sync -->
+  <script>
+    (function () {
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function syncFocusMapLeaders() {
+        document.querySelectorAll(".map-stage").forEach(function (stage) {
+          var svg = stage.querySelector("svg.world-map");
+          if (!svg || !svg.viewBox || !svg.viewBox.baseVal) return;
+
+          var svgRect = svg.getBoundingClientRect();
+          if (!svgRect.width || !svgRect.height) return;
+
+          var viewBox = svg.viewBox.baseVal;
+          var scaleX = viewBox.width / svgRect.width;
+          var scaleY = viewBox.height / svgRect.height;
+          var leaders = Array.prototype.slice.call(svg.querySelectorAll(".leader"));
+          var cards = Array.prototype.slice.call(stage.querySelectorAll(".map-float"));
+
+          leaders.forEach(function (leader, index) {
+            var card = cards[index];
+            if (!card) return;
+
+            var pinX = parseFloat(leader.getAttribute("x2"));
+            var pinY = parseFloat(leader.getAttribute("y2"));
+            if (!Number.isFinite(pinX) || !Number.isFinite(pinY)) return;
+
+            var pinPageX = svgRect.left + ((pinX - viewBox.x) / scaleX);
+            var pinPageY = svgRect.top + ((pinY - viewBox.y) / scaleY);
+            var cardRect = card.getBoundingClientRect();
+
+            var anchorPageX = clamp(pinPageX, cardRect.left, cardRect.right);
+            var anchorPageY = clamp(pinPageY, cardRect.top, cardRect.bottom);
+
+            leader.setAttribute("x1", (viewBox.x + ((anchorPageX - svgRect.left) * scaleX)).toFixed(1));
+            leader.setAttribute("y1", (viewBox.y + ((anchorPageY - svgRect.top) * scaleY)).toFixed(1));
+          });
+        });
+      }
+
+      window.addEventListener("load", syncFocusMapLeaders);
+      window.addEventListener("resize", syncFocusMapLeaders);
+      window.addEventListener("orientationchange", function () {
+        setTimeout(syncFocusMapLeaders, 180);
+      });
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(syncFocusMapLeaders);
+      }
+    }());
+  </script>
+
 </body>
 </html>
